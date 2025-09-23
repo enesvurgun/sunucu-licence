@@ -1,30 +1,27 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
 
 app.use(cors());
 
+
 const validKeys = (process.env.LICENSE_KEYS || "").split(",");
-const payloadPath = path.join(__dirname, 'payload.js');
 
 app.get("/validate", (req, res) => {
   const providedKey = req.query.license;
-  if (providedKey && validKeys.includes(providedKey)) {
-    fs.readFile(payloadPath, 'utf8', (err, data) => {
-      if (err) {
-        return res.status(500).send("Server Error: Payload okunamadı.");
-      }
-      res.setHeader('Content-Type', 'application/javascript');
-      res.send(data);
-    });
+
+  if (!providedKey) {
+    return res.status(400).json({ status: "error", message: "No license key provided." });
+  }
+
+  if (validKeys.includes(providedKey)) {
+    return res.status(200).json({ status: "success", message: "License is valid." });
   } else {
-    res.status(403).send("Error: Geçersiz Lisans.");
+    return res.status(403).json({ status: "error", message: "Invalid license key." });
   }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Sunucu ${PORT} portunda çalışıyor.`);
+  console.log(`Server is running on port ${PORT}`);
 });
