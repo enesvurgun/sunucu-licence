@@ -1,7 +1,8 @@
+// payload.js (Obfuscate Edilmeden Önceki Temiz Hali)
 (function() {
     'use strict';
 
-  
+    // === GÜVENLİK KONTROLLERİ ===
     const antiDebugCheck = () => {
         const minInterval = 100;
         let lastTime = new Date().getTime();
@@ -16,9 +17,10 @@
     };
     antiDebugCheck();
 
-    const expirationDate = new Date('2026-12-31'); 
+    const expirationDate = new Date('2026-12-31'); // Son kullanma tarihi
     if (new Date() > expirationDate) { return; }
     
+    // === ANA OYUN SCRIPTI ===
     function initializeScript() {
         console.log("Lisanslı script başarıyla çalıştırıldı.");
         
@@ -46,12 +48,13 @@
             const endpointUrl = "https://www.imperiaonline.org/imperia/game_v6/game/xajax_loader.php";
             try {
                 const response = await fetch(endpointUrl, {
-                    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "Cookie": document.cookie },
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
                     body: params.toString()
                 });
                 if (!response.ok) { throw new Error(`HTTP Hatası! Durum: ${response.status}`); }
-                console.log("Ordu taşıma isteği başarıyla gönderildi.");
-            } catch (error) { console.error("Ordu taşıma isteği sırasında bir hata oluştu:", error); }
+                console.log("✅ Ordu taşıma isteği başarıyla gönderildi.");
+            } catch (error) { console.error("❌ Ordu taşıma isteği sırasında bir hata oluştu:", error); }
         }
         
         moveArmyBtn.addEventListener("click", sendArmyMoveRequest);

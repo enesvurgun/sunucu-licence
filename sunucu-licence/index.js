@@ -1,63 +1,48 @@
+// index.js (Kale Mimarisi - Sunucu Kodu)
+
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const crypto = require('crypto'); // Şifreleme için Node.js'in kendi modülü
+const fs = require("fs"); // Dosya okumak için 'fs' (File System) modülünü ekliyoruz
+const path = require("path");
 
 app.use(cors());
-app.use(express.json());
 
+// ÖNEMLİ: Lisans anahtarlarını Render panelindeki "Environment Variables" bölümüne eklemeyi unutma!
+// Key: LICENSE_KEYS, Value: ANAHTAR1,ANAHTAR2,ANAHTAR3
 const validKeys = (process.env.LICENSE_KEYS || "").split(",");
-const sessionKeys = new Map(); // Geçici oturum anahtarlarını saklamak için
-const ALGORITHM = 'aes-256-ctr';
-const IV_LENGTH = 16;
 
-// Şifreleme fonksiyonu
-function encrypt(text, key) {
-    const iv = crypto.randomBytes(IV_LENGTH);
-    const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(key, 'hex'), iv);
-    const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
-    return `${iv.toString('hex')}:${encrypted.toString('hex')}`;
-}
+// Sunucunun göndereceği zırhlı kodun dosya yolunu belirliyoruz
+const payloadPath = path.join(__dirname, 'payload.js');
 
-// --- Fonksiyon Kütüphanesi (Değişiklik yok) ---
-const functionLibrary = { /* ... Önceki cevaptaki fonksiyonların tamamı buraya gelecek ... */ };
+// Eklentinin iletişim kuracağı tek kapı.
+// Bu adres, lisansı doğrulayıp başarılıysa payload'u gönderir.
+app.get("/validate", (req, res) => {
+    
+    // 1. Adım: Eklentiden gelen lisans anahtarını al
+    const licenseKey = req.query.license;
 
-// --- YENİ ADRES: El Sıkışma (Handshake) ---
-app.get("/handshake", (req, res) => {
-    const { licenseKey } = req.query;
+    // 2. Adım: Lisans Anahtarını Doğrula
     if (!licenseKey || !validKeys.includes(licenseKey)) {
+        // Eğer lisans geçersizse, işlemi hemen durdur ve hata gönder.
         return res.status(403).send("Error: Geçersiz Lisans.");
     }
-    // Bu lisans için geçici ve güvenli bir oturum anahtarı oluştur
-    const sessionKey = crypto.randomBytes(32).toString('hex');
-    sessionKeys.set(licenseKey, sessionKey); // Anahtarı lisansla ilişkilendirerek sakla
 
-    console.log(`Anahtar oluşturuldu: ${licenseKey}`);
-    res.status(200).json({ sessionKey: sessionKey });
-});
-
-// --- GÜNCELLENMİŞ ADRES: Şifreli Fonksiyon Gönderme ---
-app.get("/get-function", (req, res) => {
-    const { licenseKey, functionName } = req.query;
-    const sessionKey = sessionKeys.get(licenseKey);
-
-    // 1. Önce oturum anahtarı var mı diye kontrol et (Handshake yapılmış mı?)
-    if (!sessionKey) {
-        return res.status(401).send("Error: Oturum anahtarı bulunamadı. Önce /handshake yapın.");
-    }
-
-    const functionCode = functionLibrary[functionName];
-    if (functionCode) {
-        // 2. Fonksiyon kodunu oturum anahtarıyla şifrele
-        const encryptedCode = encrypt(functionCode, sessionKey);
-        res.setHeader('Content-Type', 'text/plain');
-        res.send(encryptedCode); // Şifreli veriyi gönder
-    } else {
-        res.status(404).send("Error: Fonksiyon bulunamadı.");
-    }
+    // 3. Adım: Lisans geçerliyse, payload.js dosyasını oku
+    fs.readFile(payloadPath, 'utf8', (err, data) => {
+        // Dosya okunamadıysa (örn: silinmişse) sunucu hatası ver
+        if (err) {
+            console.error("Payload dosyası okunamadı:", err);
+            return res.status(500).send("Server Error: Payload okunamadı.");
+        }
+        
+        // 4. Adım: Her şey yolundaysa, dosyanın içeriğini (zırhlı kodu) gönder
+        res.setHeader('Content-Type', 'application/javascript');
+        res.send(data);
+    });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Şifreli Fonksiyon Fabrikası sunucusu ${PORT} portunda çalışıyor.`);
+    console.log(`Kale Sunucusu ${PORT} portunda çalışıyor.`);
 });
