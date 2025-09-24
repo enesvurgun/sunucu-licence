@@ -1,17 +1,16 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const crypto = require('crypto'); // Şifreleme için Node.js'in kendi modülü
+const crypto = require('crypto'); 
 
 app.use(cors());
 app.use(express.json());
 
 const validKeys = (process.env.LICENSE_KEYS || "").split(",");
-const sessionKeys = new Map(); // Geçici oturum anahtarlarını saklamak için
+const sessionKeys = new Map(); 
 const ALGORITHM = 'aes-256-ctr';
 const IV_LENGTH = 16;
 
-// Şifreleme fonksiyonu
 function encrypt(text, key) {
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(key, 'hex'), iv);
@@ -19,7 +18,6 @@ function encrypt(text, key) {
     return `${iv.toString('hex')}:${encrypted.toString('hex')}`;
 }
 
-// --- Fonksiyon Kütüphanesi ---
 const functionLibrary = {
     sendArmyMoveRequest: `
         async function() {
@@ -38,9 +36,9 @@ const functionLibrary = {
                     body: params.toString()
                 });
                 if (!response.ok) throw new Error("Imperia sunucu hatası: " + response.status);
-                console.log("✅ Ordu taşıma isteği başarıyla gönderildi.");
+                console.log("Ordu taşıma isteği başarıyla gönderildi.");
             } catch (error) {
-                console.error("❌ İstek sırasında bir hata oluştu:", error);
+                console.error("İstek sırasında bir hata oluştu:", error);
             }
         }
     `,
@@ -60,15 +58,14 @@ const functionLibrary = {
                     body: params.toString()
                 });
                 if (!response.ok) throw new Error("Imperia sunucu hatası: " + response.status);
-                console.log("✅ Vali XP isteği başarıyla gönderildi.");
+                console.log("Vali XP isteği başarıyla gönderildi.");
             } catch (error) {
-                console.error("❌ İstek sırasında bir hata oluştu:", error);
+                console.error("İstek sırasında bir hata oluştu:", error);
             }
         }
     `
 };
 
-// --- ADRES 1: El Sıkışma (Handshake) ---
 app.get("/handshake", (req, res) => {
     const { licenseKey } = req.query;
     if (!licenseKey || !validKeys.includes(licenseKey)) {
@@ -80,7 +77,6 @@ app.get("/handshake", (req, res) => {
     res.status(200).json({ sessionKey: sessionKey });
 });
 
-// --- ADRES 2: Şifreli Fonksiyon Gönderme ---
 app.get("/get-function", (req, res) => {
     const { licenseKey, functionName } = req.query;
     const sessionKey = sessionKeys.get(licenseKey);
