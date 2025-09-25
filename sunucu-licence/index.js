@@ -5,9 +5,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// C# uygulamasından gelen giriş ve lisans kontrolü adresi
 app.post("/login", (req, res) => {
-    // C# uygulamasından sadece username ve password bekleniyor, hwid yok.
+    // C# uygulamasından sadece username ve password bekleniyor.
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -20,19 +19,29 @@ app.post("/login", (req, res) => {
             return res.status(401).json({ success: false, message: "Kullanıcı bulunamadı." });
         }
 
-        // 2. Şifreyi DOĞRUDAN karşılaştır (GÜVENLİ DEĞİL!)
+        // 2. Şifreyi doğrudan karşılaştır
         if (password !== process.env.APP_PASSWORD) {
             return res.status(401).json({ success: false, message: "Geçersiz şifre." });
         }
 
-        // 3. Lisans süresini kontrol et
-        const expiryDate = new Date(process.env.APP_EXPIRY_DATE);
+        // 3. Lisans süresini GÜN-AY-YIL formatına göre kontrol et
+        const dateParts = process.env.APP_EXPIRY_DATE.split('-'); // "31-12-2025" -> ["31", "12", "2025"]
+        // Format: new Date(YIL, AY-1, GÜN)
+        const expiryDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]); 
+
         if (new Date() > expiryDate) {
             return res.status(403).json({ success: false, message: "Lisans süresi dolmuş." });
         }
+        
+        // C# tarafına göndermek için tarihi direkt Environment'dan geldiği gibi yolluyoruz.
+        const formattedExpiryDate = process.env.APP_EXPIRY_DATE;
 
         // Tüm kontrollerden geçtiyse başarılı yanıtı gönder
-        res.status(200).json({ success: true, message: "Giriş başarılı." });
+        res.status(200).json({ 
+            success: true, 
+            message: "Giriş başarılı.",
+            expiryDate: formattedExpiryDate
+        });
 
     } catch (error) {
         console.error("Sunucu hatası:", error);
