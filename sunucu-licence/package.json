@@ -1,12 +1,15 @@
 {
-  "name": "imperia-security-server",
-  "version": "1.0.0",
+  "name": "lisans-sunucusu-render-pg",
+  "version": "2.0.0",
+  "description": "PostgreSQL tabanlı lisans sunucusu",
+  "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node index.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "pg": "^8.11.3",         
+    "bcryptjs": "^2.4.3"    
   }
 }
