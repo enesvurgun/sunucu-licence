@@ -1,20 +1,16 @@
 const express = require("express");
-const bcrypt = require('bcryptjs');
 const cors = require('cors');
-const fs = require('fs').promises; // Dosya işlemleri için
-const path = require('path');     // Dosya yolu işlemleri için
-
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-// Render'ın kalıcı disk alanı olan /data klasöründe bir lisans dosyası yolu tanımlıyoruz.
-const licenseFilePath = path.join('/data', 'license.json');
-
 // C# uygulamasından gelen giriş ve lisans kontrolü adresi
-app.post("/login", async (req, res) => {
-    const { username, password, hwid } = req.body;
-    if (!username || !password || !hwid) {
+app.post("/login", (req, res) => {
+    // C# uygulamasından sadece username ve password bekleniyor, hwid yok.
+    const { username, password } = req.body;
+
+    if (!username || !password) {
         return res.status(400).json({ success: false, message: "Eksik bilgi." });
     }
 
@@ -24,9 +20,8 @@ app.post("/login", async (req, res) => {
             return res.status(401).json({ success: false, message: "Kullanıcı bulunamadı." });
         }
 
-        // 2. Şifreyi Environment'dan gelen hash ile karşılaştır
-        const isPasswordValid = await bcrypt.compare(password, process.env.APP_PASSWORD_HASH);
-        if (!isPasswordValid) {
+        // 2. Şifreyi DOĞRUDAN karşılaştır (GÜVENLİ DEĞİL!)
+        if (password !== process.env.APP_PASSWORD) {
             return res.status(401).json({ success: false, message: "Geçersiz şifre." });
         }
 
@@ -36,28 +31,7 @@ app.post("/login", async (req, res) => {
             return res.status(403).json({ success: false, message: "Lisans süresi dolmuş." });
         }
 
-        // 4. Donanım ID (HWID) kontrolü
-        let savedHwid = null;
-        try {
-            // Lisans dosyasını okumayı dene
-            const licenseData = await fs.readFile(licenseFilePath, 'utf8');
-            savedHwid = JSON.parse(licenseData).hwid;
-        } catch (error) {
-            // Eğer dosya yoksa (ilk giriş), hata vermeden devam et.
-            if (error.code !== 'ENOENT') throw error; 
-        }
-
-        if (savedHwid && savedHwid !== hwid) {
-            return res.status(403).json({ success: false, message: "Bu lisans başka bir bilgisayara kayıtlı." });
-        }
-
-        // 5. Eğer ilk giriş ise (dosyada HWID yoksa), HWID'yi dosyaya kaydet
-        if (!savedHwid) {
-            const licenseInfo = { hwid: hwid, registrationDate: new Date().toISOString() };
-            await fs.writeFile(licenseFilePath, JSON.stringify(licenseInfo, null, 2));
-            console.log(`İlk giriş için HWID kaydedildi: ${username} - ${hwid}`);
-        }
-
+        // Tüm kontrollerden geçtiyse başarılı yanıtı gönder
         res.status(200).json({ success: true, message: "Giriş başarılı." });
 
     } catch (error) {
@@ -66,4 +40,4 @@ app.post("/login", async (req, res) => {
     }
 });
 
-app.listen(process.env.PORT || 3001, () => console.log(`Dosya tabanlı lisans sunucusu çalışıyor.`));
+app.listen(process.env.PORT || 3001, () => console.log(`Basit lisans sunucusu çalışıyor.`));
