@@ -73,6 +73,13 @@ app.post("/login", loginLimiter, async (req, res) => {
 
         console.log(`[IP: ${ip}] Giriş BAŞARILI: '${username}' kullanıcısı giriş yaptı.`);
 
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+
+        const decryptionKey = process.env.DECRYPTION_KEY || null;
+
+
         let formattedExpiryDate = null;
         if (user.expiry_date) {
             const expiry = new Date(user.expiry_date);
@@ -85,7 +92,8 @@ app.post("/login", loginLimiter, async (req, res) => {
         res.status(200).json({ 
             success: true, 
             message: "Giriş başarılı.",
-            expiryDate: formattedExpiryDate
+            expiryDate: formattedExpiryDate,
+            decryptionKey
         });
 
     } catch (error) {
